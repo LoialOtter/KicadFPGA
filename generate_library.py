@@ -173,10 +173,10 @@ def create_symbols(filename : str):
                 pin.position.angle = 0.0
                 in_pos_y -= 2.54
             else:
-                if   port.mode == "output": pin.electricalType = "output"
-                elif port.mode ==    "out": pin.electricalType = "output"
-                elif port.mode ==  "inout": pin.electricalType = "bidirectional"
-                else:                       pin.electricalType = "unspecified"
+                if   port.mode.lower() == "output": pin.electricalType = "output"
+                elif port.mode.lower() ==    "out": pin.electricalType = "output"
+                elif port.mode.lower() ==  "inout": pin.electricalType = "bidirectional"
+                else:                               pin.electricalType = "unspecified"
                 pin.position.X     = 45.72
                 pin.position.Y     = out_pos_y
                 pin.position.angle = 180.0
