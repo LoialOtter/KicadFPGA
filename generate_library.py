@@ -166,7 +166,7 @@ def create_symbols(filename : str):
             
             pin.name = port_name(port)
 
-            if port.mode in ["input", "in"]: 
+            if port.mode.lower() in ["input", "in"]: 
                 pin.electricalType = "input"
                 pin.position.X     = 0.0
                 pin.position.Y     = in_pos_y
