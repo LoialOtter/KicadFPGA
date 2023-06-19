@@ -1,4 +1,6 @@
 #==============================================================================
+# Copyright Matthew Peters - 2023
+#==============================================================================
 # This file is part of KicadFPGA
 #
 # KicadFPGA is free software: you can redistribute it and/or modify it under
@@ -106,26 +108,35 @@ def port_name(port : vhdl_parser.VhdlParameter):
     dt = port.data_type
 
     if dt.l_bound and dt.r_bound:
-        try:
-            #l_bound = int(dt.l_bound)
-            #r_bound = int(dt.r_bound)
-            #if r_bound == 0:  rangestr = f"{l_bound+1}"
-            #elif r_bound < 0: rangestr = f"{l_bound+1}.{-r_bound}"
-            #else:             rangestr = f"{l_bound}:{r_bound}" # default for positive r_bounds
-            rangestr = f"{dt.l_bound}:{dt.r_bound}"
-        except ValueError:
-            rangestr = f"{dt.l_bound}:{dt.r_bound}"
+        if re.search(r'\D', dt.l_bound): l_bound = f'({dt.l_bound})'
+        else:                            l_bound = f'{dt.l_bound}'
+        if re.search(r'\D', dt.r_bound): r_bound = f'({dt.r_bound})'
+        else:                            r_bound = f'{dt.r_bound}'
+        rangestr = f"{l_bound}:{r_bound}"
+        #try:
+        #    #l_bound = int(dt.l_bound)
+        #    #r_bound = int(dt.r_bound)
+        #    #if r_bound == 0:  rangestr = f"{l_bound+1}"
+        #    #elif r_bound < 0: rangestr = f"{l_bound+1}.{-r_bound}"
+        #    #else:             rangestr = f"{l_bound}:{r_bound}" # default for positive r_bounds
+        #    rangestr = f"{dt.l_bound}:{dt.r_bound}"
+        #except ValueError:
+        #    rangestr = f"{dt.l_bound}:{dt.r_bound}"
 
-        if   dt.name.lower() in ['std_logic', 'boolean']:    typestr = ''
+        if   dt.name.lower() in ['std_logic']:               typestr = ''
+        elif dt.name.lower() in ['boolean']:                 typestr = '(b)'
         elif dt.name.lower() in ['std_logic_vector', 'slv']: typestr = f"({rangestr})"
-        elif dt.name.lower() in ['sfixed', 'signed']:        typestr = f"(s{rangestr})"
-        elif dt.name.lower() in ['ufixed', 'unsigned']:      typestr = f"(u{rangestr})"
+        elif dt.name.lower() in ['signed']:                  typestr = f"(s {rangestr})"
+        elif dt.name.lower() in ['sfixed']:                  typestr = f"(sf {rangestr})"
+        elif dt.name.lower() in ['unsigned']:                typestr = f"(u {rangestr})"
+        elif dt.name.lower() in ['ufixed']:                  typestr = f"(uf {rangestr})"
         else:                                                typestr = f"({dt.name} {rangestr})" # unknown type
 
     else:
-        if dt.name.lower() in ['std_logic', 'boolean']: typestr = ''
-        elif dt.name.lower() == 'std_logic_vector':     typestr = '(slv)'
-        else: typestr = f"({dt.name})"
+        if   dt.name.lower() == 'std_logic':                 typestr = ''
+        elif dt.name.lower() == 'boolean':                   typestr = '(b)'
+        elif dt.name.lower() in ['std_logic_vector', 'slv']: typestr = '(slv)'
+        else:                                                typestr = f"({dt.name})"
     
     return f"{port.name}{typestr}"
 
@@ -143,10 +154,12 @@ def create_symbols(filename : str):
         name = component.name
     
         sym = Symbol().create_new(name, reference=f"{name}_", value=f'{name}')
+        sym.hidePinNumbers = True
         find_property(sym.properties, 'Value').effects.hide=True
-
+        
+        filename = filename.replace('\\', '/')
         sym.properties.append(Property(key='hdl', value=filename, id=len(sym.properties), effects=Effects(font=Font(width=1.27), hide=True)))
-        for gen in hdl_info[0].generics:
+        for gen in component.generics:
             if not gen.data_type:
                 gen.data_type = 'integer'
             sym.properties.append(Property(key=f"{gen.name}({gen.data_type}) -- {gen.desc}",
@@ -160,7 +173,7 @@ def create_symbols(filename : str):
         pin_num = 1
         in_pos_y = -2.54
         out_pos_y = -2.54
-        for _,port in enumerate(hdl_info[0].ports):
+        for _,port in enumerate(component.ports):
             pin = SymbolPin()
             port = parse_port(port) # make sure it's in the correct format
             
@@ -205,6 +218,9 @@ def update_symbol(symbol: Symbol, library: SymbolLib):
         # symbol doesn't exist, add to library
         library.symbols.append(symbol)
         return
+
+    # update the HDL path
+    find_property(libsym.properties, 'hdl').value = find_property(symbol.properties, 'hdl').value
 
     # update the properties    
     for prop in symbol.properties:
