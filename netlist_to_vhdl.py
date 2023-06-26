@@ -431,11 +431,11 @@ def generate_code(infile:str, outfile:str, template:str):
                     if component.instance_name == node.ref:
                         for port in component.ports:
                             if port.num == node.pin:
-                                if port.dirstr == 'input':
+                                if port.dirstr == 'in':
                                     if port.vhdl_type == 'boolean':
                                         port.target = "false"
                                     elif port.vhdl_type == "std_logic":
-                                        port.target = '"0"'
+                                        port.target = "'0'"
                                     else:
                                         port.target = "(others => '0')"
                                 else:
